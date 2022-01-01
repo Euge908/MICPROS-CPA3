@@ -4,7 +4,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdio.h>
-
+#include <stdlib.h>
 
 #define ROWS 4
 #define COLS 4
@@ -26,6 +26,8 @@ char keyMap[ROWS][COLS] = { // key definitions
 
 //this module should be able to change BOTH the date and time
 
+//note that the lcd is a 16x2 lcd
+
 #include "i2c_master.h"
 #include "liquid_crystal_i2c.h"
 #include "ds1302.h"
@@ -34,18 +36,17 @@ char keyMap[ROWS][COLS] = { // key definitions
 void initKeypad();
 char getKeyPressed();
 void initTicker();
-
-
+bool isNum(char c);
+char* getSubstring(const char * str, int len, int start, int finish);
 
 volatile uint32_t tick = 0;
 uint32_t LCDCountTick; // time stamp
-char LCDStr[20]; // LCD string display
+char LCDStr[2][20]; // LCD string display
 
 
 // Variables for RTC
 DS1302_t rtc; // DS1302 structure
 DateTime dateTime; // date and time structure
-
 
 int main(void)
 {
@@ -70,7 +71,7 @@ int main(void)
 
     
     char keyPressed = 0; // initially no keys were pressed yet
-    uint8_t cursorX, cursorY; //for the display cursor position in LCD
+    uint8_t cursorX = 0, cursorY = 0; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
 
     //mode 0 - view time
@@ -104,12 +105,15 @@ int main(void)
     while(1) {
       keyPressed = getKeyPressed();
 
+      Serial.print("X: ");
+      Serial.print(cursorX);
+      Serial.print(", Y: ");
+      Serial.println(cursorY);
 
       if (keyPressed == 'A'){
         //switch mode is pressed
         mode = (mode + 1) % NUM_MODES;
         _delay_ms(1000);
-        Serial.println(mode);
 
         lq_setCursor(&lcd, 0, 0);
 
@@ -123,25 +127,49 @@ int main(void)
               if (!dateTime.halted) {
                   // Display the date in yyyy-mm-dd format
                   lq_setCursor(&lcd, 0, 0);
-                  sprintf(LCDStr, "20%02u-%02u-%02u", dateTime.year, dateTime.month, dateTime.day);
-                  lq_print(&lcd, LCDStr);
+                  sprintf(LCDStr[0], "20%02u-%02u-%02u", dateTime.year, dateTime.month, dateTime.day);
+                  lq_print(&lcd, LCDStr[0]);
                   
                   // Display the time in hh:mm:ss format (24-hour format)
                   lq_setCursor(&lcd, 1, 0);
-                  sprintf(LCDStr, "%02u:%02u:%02u", dateTime.hour, dateTime.minute, dateTime.second);
-                  lq_print(&lcd, LCDStr);
+                  sprintf(LCDStr[1], "%02u:%02u:%02u", dateTime.hour, dateTime.minute, dateTime.second);
+                  lq_print(&lcd, LCDStr[1]);
               }
               LCDCountTick = tick;
         }
       }else if (mode == 1){
         lq_turnOnCursor(&lcd);
         
-        if(keyPressed == '0' | keyPressed == '1' | keyPressed == '2' | keyPressed == '3' | keyPressed == '4' | keyPressed == '5' 
-        | keyPressed == '6' | keyPressed == '7' | keyPressed == '7' | keyPressed == '8' | keyPressed == '9'){
+        if(isNum(keyPressed)){
           //number is pressed
+          if(isNum(LCDStr[cursorY][cursorX])){
+             LCDStr[cursorY][cursorX] = keyPressed;
+             
+             lq_setCursor(&lcd, 0, 0);
+             lq_print(&lcd, LCDStr[0]);
+
+             lq_setCursor(&lcd, 1, 0);
+             lq_print(&lcd, LCDStr[1]);
+
+             lq_setCursor(&lcd, cursorY, cursorX);
+
+          }
+          
         }
         else if (keyPressed == 'S'){
           //save is pressed
+          
+          //FORMAT:
+          //LCDStr[0] = yyyy-mm-dd format 
+          //LCDSTR[1] = hh:mm:ss
+          
+          //MONTH_DEC IS A NUM (ie 12)
+          uint8_t month, day, year, hour, minutes, seconds;
+          
+          dateTime = ds1302_date_time(2022, MONTH_DEC, 5, 12, 00, 00);
+          ds1302_set_time(&rtc, &dateTime); // Sets the time. Should be commented once done
+
+          
         }else if (keyPressed == '<' | keyPressed == '>' | keyPressed == '^' | keyPressed == 'v' ){
           //shift cursor buttons are pressed
   
@@ -151,9 +179,11 @@ int main(void)
             cursorX += 1;
           }else if(keyPressed == '^' && cursorY - 1 >= 0){
             cursorY -= 1;
-          }else if(keyPressed == 'v' && cursorY + 1 >= 0){
+          }else if(keyPressed == 'v' && cursorY + 1 <= 1){
             cursorY += 1;
           }
+
+          
           lq_setCursor(&lcd, cursorY, cursorX);
 
         }
@@ -163,6 +193,28 @@ int main(void)
     }
 }
 
+char* getSubstring(const char * str, int len, int start, int finish){
+  int j = 0;
+  char buff[len] = "";
+  for (int i = start; i < finish; i++){
+      buff[i] = str[i];
+  }
+  buff[j] = 0;
+  return str;
+}
+
+
+
+bool isNum(char keyPressed){
+  if(keyPressed == '0' | keyPressed == '1' | keyPressed == '2' | keyPressed == '3' | keyPressed == '4' | keyPressed == '5' 
+        | keyPressed == '6' | keyPressed == '7' | keyPressed == '7' | keyPressed == '8' | keyPressed == '9')
+  {
+    return true;          
+  }
+
+  return false;
+  
+}
 
 void initKeypad(){
     //initialize PB0 to PB3 as inputs (by default DDRB is 0, but it is good practice to just initialize stuff)
