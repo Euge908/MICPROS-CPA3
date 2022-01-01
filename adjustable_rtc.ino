@@ -8,7 +8,7 @@
 
 #define ROWS 4
 #define COLS 4
-
+#define NUM_MODES 2
 char keyMap[ROWS][COLS] = { // key definitions
     {'3', '2', '1', '0'},
     {'7', '6', '5', '4'},
@@ -70,10 +70,11 @@ int main(void)
 
     
     char keyPressed = 0; // initially no keys were pressed yet
-    uint8_t cursorRow, cursorColumn; //for the display cursor position in LCD
+    uint8_t cursorX, cursorY; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
 
-
+    //mode 0 - view time
+    //mode 1 - set time
     //initialize keypad stuff (registers)
     initKeypad();    
 
@@ -94,41 +95,71 @@ int main(void)
     // Initialize a new time to Dec 5, 2021 12:00:00
      dateTime = ds1302_date_time(2021, MONTH_DEC, 5, 12, 00, 00);
      ds1302_set_time(&rtc, &dateTime); // Sets the time. Should be commented once done
+
     
     lq_turnOnBacklight(&lcd); // turn on backlight
     _delay_ms(1000); //wait for 1 second
 
     
-    
     while(1) {
       keyPressed = getKeyPressed();
-      Serial.println(keyPressed);
 
 
-      if(keyPressed == '0' | keyPressed == '1' | keyPressed == '2' | keyPressed == '3' | keyPressed == '4' | keyPressed == '5' 
-      | keyPressed == '6' | keyPressed == '7' | keyPressed == '7' | keyPressed == '8' | keyPressed == '9'){
+      if (keyPressed == 'A'){
+        //switch mode is pressed
+        mode = (mode + 1) % NUM_MODES;
+        _delay_ms(1000);
+        Serial.println(mode);
+
+        lq_setCursor(&lcd, 0, 0);
+
+      }
+      
+      if(mode == 0){
+        //just display the time
+        lq_turnOffCursor(&lcd);
+        if (tick - LCDCountTick >= 250) { // update the display every 100 ticks
+              dateTime = ds1302_get_time(&rtc); // get the RTC time
+              if (!dateTime.halted) {
+                  // Display the date in yyyy-mm-dd format
+                  lq_setCursor(&lcd, 0, 0);
+                  sprintf(LCDStr, "20%02u-%02u-%02u", dateTime.year, dateTime.month, dateTime.day);
+                  lq_print(&lcd, LCDStr);
+                  
+                  // Display the time in hh:mm:ss format (24-hour format)
+                  lq_setCursor(&lcd, 1, 0);
+                  sprintf(LCDStr, "%02u:%02u:%02u", dateTime.hour, dateTime.minute, dateTime.second);
+                  lq_print(&lcd, LCDStr);
+              }
+              LCDCountTick = tick;
+        }
+      }else if (mode == 1){
+        lq_turnOnCursor(&lcd);
         
-      }else if (keyPressed == 'A'){
-        
-      }else if (keyPressed == 'S'){
-        
+        if(keyPressed == '0' | keyPressed == '1' | keyPressed == '2' | keyPressed == '3' | keyPressed == '4' | keyPressed == '5' 
+        | keyPressed == '6' | keyPressed == '7' | keyPressed == '7' | keyPressed == '8' | keyPressed == '9'){
+          //number is pressed
+        }
+        else if (keyPressed == 'S'){
+          //save is pressed
+        }else if (keyPressed == '<' | keyPressed == '>' | keyPressed == '^' | keyPressed == 'v' ){
+          //shift cursor buttons are pressed
+  
+          if(keyPressed == '<' && cursorX - 1 >= 0){
+            cursorX -= 1;
+          }else if(keyPressed == '>' && cursorX + 1 <=15){
+            cursorX += 1;
+          }else if(keyPressed == '^' && cursorY - 1 >= 0){
+            cursorY -= 1;
+          }else if(keyPressed == 'v' && cursorY + 1 >= 0){
+            cursorY += 1;
+          }
+          lq_setCursor(&lcd, cursorY, cursorX);
+
+        }
+      
       }
 
-      if (tick - LCDCountTick >= 250) { // update the display every 100 ticks
-            dateTime = ds1302_get_time(&rtc); // get the RTC time
-            if (!dateTime.halted) {
-                // Display the date in yyyy-mm-dd format
-                lq_setCursor(&lcd, 0, 0);
-                sprintf(LCDStr, "20%02u-%02u-%02u", dateTime.year, dateTime.month, dateTime.day);
-                lq_print(&lcd, LCDStr);
-                
-                // Display the time in hh:mm:ss format (24-hour format)
-                lq_setCursor(&lcd, 1, 0);
-                sprintf(LCDStr, "%02u:%02u:%02u", dateTime.hour, dateTime.minute, dateTime.second);
-                lq_print(&lcd, LCDStr);
-            }
-            LCDCountTick = tick;
-      }
     }
 }
 
