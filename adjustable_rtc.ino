@@ -37,7 +37,8 @@ void initKeypad();
 char getKeyPressed();
 void initTicker();
 bool isNum(char c);
-char* getSubstring(const char * str, int len, int start, int finish);
+char* getSubstring(char * str, int len, int start, int finish);
+
 
 volatile uint32_t tick = 0;
 uint32_t LCDCountTick; // time stamp
@@ -105,10 +106,10 @@ int main(void)
     while(1) {
       keyPressed = getKeyPressed();
 
-      Serial.print("X: ");
-      Serial.print(cursorX);
-      Serial.print(", Y: ");
-      Serial.println(cursorY);
+//      Serial.print("X: ");
+//      Serial.print(cursorX);
+//      Serial.print(", Y: ");
+//      Serial.println(cursorY);
 
       if (keyPressed == 'A'){
         //switch mode is pressed
@@ -144,7 +145,9 @@ int main(void)
           //number is pressed
           if(isNum(LCDStr[cursorY][cursorX])){
              LCDStr[cursorY][cursorX] = keyPressed;
-             
+
+             lq_clear(&lcd);
+
              lq_setCursor(&lcd, 0, 0);
              lq_print(&lcd, LCDStr[0]);
 
@@ -164,10 +167,31 @@ int main(void)
           //LCDSTR[1] = hh:mm:ss
           
           //MONTH_DEC IS A NUM (ie 12)
-          uint8_t month, day, year, hour, minutes, seconds;
+          char *month, *day, *year, *hour, *minute, *second;
+          year = getSubstring(LCDStr[0], 20, 0, 5);
+          month = getSubstring(LCDStr[0], 20, 5, 7);
+          day = getSubstring(LCDStr[0], 20, 8, 10);
+          hour  = getSubstring(LCDStr[1], 20, 0, 2);
+          minute = getSubstring(LCDStr[1], 20, 3, 5);
+          second = getSubstring(LCDStr[1], 20, 6, 8);
+
+
+          char* x = (char*) malloc(20 * sizeof(char));
+          sprintf(x, "Date: %s-%s-%s || Time: %s:%s:%s", year, month, day, hour, minute, second);
           
-          dateTime = ds1302_date_time(2022, MONTH_DEC, 5, 12, 00, 00);
-          ds1302_set_time(&rtc, &dateTime); // Sets the time. Should be commented once done
+          Serial.println(LCDStr[0]);
+          Serial.println(LCDStr[1]);
+          Serial.println(x);
+
+          memset(month, 0, 20);
+          memset(year, 0, 20);
+          memset(day, 0, 20);
+          memset(hour, 0, 20);
+          memset(minute, 0, 20);
+          memset(second, 0, 20);
+          
+//          dateTime = ds1302_date_time(year, month, day, hour, minute, second);
+//          ds1302_set_time(&rtc, &dateTime); // Sets the time. Should be commented once done
 
           
         }else if (keyPressed == '<' | keyPressed == '>' | keyPressed == '^' | keyPressed == 'v' ){
@@ -193,14 +217,17 @@ int main(void)
     }
 }
 
-char* getSubstring(const char * str, int len, int start, int finish){
+char* getSubstring(char * str, int len, int start, int finish){
   int j = 0;
-  char buff[len] = "";
+  char* buff = (char*) malloc(len * sizeof(char));
+  
   for (int i = start; i < finish; i++){
       buff[i] = str[i];
   }
-  buff[j] = 0;
-  return str;
+
+  buff[len] = 0;
+  
+  return buff;
 }
 
 
