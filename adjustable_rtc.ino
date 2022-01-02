@@ -72,7 +72,7 @@ int main(void)
 
     
     char keyPressed = 0; // initially no keys were pressed yet
-    uint8_t cursorX = 0, cursorY = 0; //for the display cursor position in LCD
+    uint8_t cursorX = 2, cursorY = 0; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
 
 
@@ -146,6 +146,8 @@ int main(void)
         }
       }else if (mode == 1){
         lq_turnOnCursor(&lcd);
+        lq_setCursor(&lcd, cursorY, cursorX);
+
         
         if(isNum(keyPressed)){
           //number is pressed
@@ -174,7 +176,7 @@ int main(void)
           
           //MONTH_DEC IS A NUM (ie 12)
           char *month, *day, *year, *hour, *minute, *second;
-          year = getSubstring(LCDStr[0], 0, 4);
+          year = getSubstring(LCDStr[0], 2, 4);
           month = getSubstring(LCDStr[0], 5, 7);
           day = getSubstring(LCDStr[0], 8, 10);
           hour  = getSubstring(LCDStr[1], 0, 2);
@@ -182,39 +184,48 @@ int main(void)
           second = getSubstring(LCDStr[1], 6, 8);
 
 
-          char* x = (char*) malloc(100 * sizeof(char));
-          x[100] = 0;
-          sprintf(LCDStr[0], "20%02u-%02u-%02u", year, month, day);
-          sprintf(LCDStr[1], "%02u:%02u:%02u", hour, minute, second);
+//          char* x = (char*) malloc(100 * sizeof(char));
+//          x[100] = 0;
+          sprintf(LCDStr[0], "20%s-%s-%s", year, month, day);
+          sprintf(LCDStr[1], "%s:%s:%s", hour, minute, second);
 
 
-          
-          Serial.println(LCDStr[0]);
-          Serial.println(LCDStr[1]);
+          //holy shit this works. special thanks to git --reset hard 
+//          Serial.println(LCDStr[0]);
+//          Serial.println(LCDStr[1]);
+//          Serial.println(x);
+//
+//          sprintf(x, "%u-%u-%u || %u:%u:%u", atoi(year), atoi(month), atoi(day), atoi(hour), atoi(minute), atoi(second));
 //          Serial.println(x);
 
+          //dateTime = ds1302_get_time(&rtc); // get the RTC time
+          
+          dateTime = ds1302_date_time( atoi(year), atoi(month), atoi(day), atoi(hour), atoi(minute), atoi(second) );
+          ds1302_set_time(&rtc, &dateTime); // Sets the time. Should be commented once done
           free(month);
           free(year);
           free(day);
           free(hour);
           free(minute);
           free(second);
-          free(x);
+//          free(x);
 
-          
-//          dateTime = ds1302_date_time(year, month, day, hour, minute, second);
-//          ds1302_set_time(&rtc, &dateTime); // Sets the time. Should be commented once done
 
           
         }else if (keyPressed == '<' | keyPressed == '>' | keyPressed == '^' | keyPressed == 'v' ){
           //shift cursor buttons are pressed
   
-          if(keyPressed == '<' && cursorX - 1 >= 0){
-            cursorX -= 1;
+          if(keyPressed == '<'){
+            if( (cursorX - 1 >= 2 && cursorY == 0) || (cursorX - 1 >= 0 && cursorY == 1) ){
+              cursorX -= 1;            
+            }
           }else if(keyPressed == '>' && cursorX + 1 <=15){
             cursorX += 1;
           }else if(keyPressed == '^' && cursorY - 1 >= 0){
-            cursorY -= 1;
+            if(cursorX >=2){
+              cursorY -= 1;            
+            }
+            
           }else if(keyPressed == 'v' && cursorY + 1 <= 1){
             cursorY += 1;
           }
@@ -224,6 +235,10 @@ int main(void)
 
         }
       
+      }
+
+      if(keyPressed != 0){
+          _delay_ms(500); //wait for 0.5 second  
       }
 
     }
