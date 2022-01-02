@@ -37,7 +37,7 @@ void initKeypad();
 char getKeyPressed();
 void initTicker();
 bool isNum(char c);
-char* getSubstring(char * str, int len, int start, int finish);
+char* getSubstring(char * str, int start, int finish);
 
 
 volatile uint32_t tick = 0;
@@ -75,6 +75,8 @@ int main(void)
     uint8_t cursorX = 0, cursorY = 0; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
 
+
+
     //mode 0 - view time
     //mode 1 - set time
     //initialize keypad stuff (registers)
@@ -89,6 +91,10 @@ int main(void)
     
     // Initialize the LCD module
     LiquidCrystalDevice_t lcd = lq_init(0x27, 16, 2, LCD_5x8DOTS);
+    
+    //clear/ synchronize with lcd
+    lq_clear(&lcd);
+
     
     // Initialize DS1302 and DateTime structure. The RTC module is
     // connected as follows: SCLK -> PD7, SIO -? PD6, and CE -> PD5
@@ -168,27 +174,33 @@ int main(void)
           
           //MONTH_DEC IS A NUM (ie 12)
           char *month, *day, *year, *hour, *minute, *second;
-          year = getSubstring(LCDStr[0], 20, 0, 5);
-          month = getSubstring(LCDStr[0], 20, 5, 7);
-          day = getSubstring(LCDStr[0], 20, 8, 10);
-          hour  = getSubstring(LCDStr[1], 20, 0, 2);
-          minute = getSubstring(LCDStr[1], 20, 3, 5);
-          second = getSubstring(LCDStr[1], 20, 6, 8);
+          year = getSubstring(LCDStr[0], 0, 4);
+          month = getSubstring(LCDStr[0], 5, 7);
+          day = getSubstring(LCDStr[0], 8, 10);
+          hour  = getSubstring(LCDStr[1], 0, 2);
+          minute = getSubstring(LCDStr[1], 3, 5);
+          second = getSubstring(LCDStr[1], 6, 8);
 
 
-          char* x = (char*) malloc(20 * sizeof(char));
-          sprintf(x, "Date: %s-%s-%s || Time: %s:%s:%s", year, month, day, hour, minute, second);
+          char* x = (char*) malloc(100 * sizeof(char));
+          x[100] = 0;
+          sprintf(LCDStr[0], "20%02u-%02u-%02u", year, month, day);
+          sprintf(LCDStr[1], "%02u:%02u:%02u", hour, minute, second);
+
+
           
           Serial.println(LCDStr[0]);
           Serial.println(LCDStr[1]);
-          Serial.println(x);
+//          Serial.println(x);
 
-          memset(month, 0, 20);
-          memset(year, 0, 20);
-          memset(day, 0, 20);
-          memset(hour, 0, 20);
-          memset(minute, 0, 20);
-          memset(second, 0, 20);
+          free(month);
+          free(year);
+          free(day);
+          free(hour);
+          free(minute);
+          free(second);
+          free(x);
+
           
 //          dateTime = ds1302_date_time(year, month, day, hour, minute, second);
 //          ds1302_set_time(&rtc, &dateTime); // Sets the time. Should be commented once done
@@ -217,17 +229,18 @@ int main(void)
     }
 }
 
-char* getSubstring(char * str, int len, int start, int finish){
-  int j = 0;
-  char* buff = (char*) malloc(len * sizeof(char));
+char* getSubstring(char * str, int start, int finish){
+  int len = finish - start;
+  char* buff = (char*) malloc((len + 1) * sizeof(char));
   
-  for (int i = start; i < finish; i++){
-      buff[i] = str[i];
+  for (int i = start; i < finish && (*(str + i) != 0); i++){
+      *buff = *(str+ i);
+      buff ++;
   }
 
-  buff[len] = 0;
+  *buff = 0;
   
-  return buff;
+  return buff - len;
 }
 
 
