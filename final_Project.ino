@@ -36,7 +36,7 @@ char getKeyPressed();
 void initTicker();
 bool isNum(char c);
 char* getSubstring(char * str, int start, int finish);
-//TODO: Add function to read ADC using internal voltage
+
 
 // RELEVANT CONNECTIONS:
 
@@ -78,7 +78,7 @@ uint32_t LCDCountTick; // time stamp
 
 char LCDStr[2][16]; // LCD string display
 char realTimeStr[2][16]; // Real time string
-char alarmTimeStr[2][16]; // Alarm time string
+char alarmTimeStr[4][16]; // Alarm time string
 
 
 
@@ -91,16 +91,12 @@ DateTime dateTime; // date and time structure
 
 
 
-
-
 //MAIN FUNCTION:
 
 int main(void)
 {
 
     Serial.begin(9600);
-
-
 
 
     // LOCAL VARIABLE DECLARATIONS: 
@@ -162,38 +158,16 @@ int main(void)
       if (keyPressed == 'A'){
         //switch mode is pressed
         mode = (mode + 1) % NUM_MODES;
-
-        
-        if(mode == 0 | mode == 1){
-          
-        }else if (mode == 2){
-          //set String to be displayed to alarmStr
-          for(int i = 0; i < 2; i++){
-            for(int j = 0; j< 16; j++){
-              LCDStr[i][j] = alarmTimeStr[i][j];  
-            } 
-          }
-          
-        }
-
-        
-        //reprint LCDStr        
         lq_setCursor(&lcd, 0, 0);
         
         LCDStr[0][13] = 'M';
         LCDStr[0][14] = ':';
         LCDStr[0][15] = mode + '0'; 
         //convert uint to char
+
         //subtract by '0' to convert char to uint
         
         lq_print(&lcd, LCDStr[0]);
-        lq_setCursor(&lcd, 0, 0);
-        lq_print(&lcd, LCDStr[1]);
-
-
-
-
-        //reset cursor
         lq_setCursor(&lcd, 0, 0);
         
       }
@@ -313,7 +287,7 @@ int main(void)
         }
       
       } else if (mode == 2){
-        //TODO: add stuff what to do when buttons are pressed in mode 2
+        
       }
 
 
