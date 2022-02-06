@@ -153,23 +153,34 @@ int main(void)
 //      Serial.print(", Y: ");
 //      Serial.println(cursorY);
 
+     
+  
       if (keyPressed == 'A'){
         //switch mode is pressed
         mode = (mode + 1) % NUM_MODES;
         lq_setCursor(&lcd, 0, 0);
+        
+        LCDStr[0][13] = 'M';
+        LCDStr[0][14] = ':';
+        LCDStr[0][15] = mode + '0'; 
+        //convert uint to char
 
+        //subtract by '0' to convert char to uint
+        
+        lq_print(&lcd, LCDStr[0]);
+        lq_setCursor(&lcd, 0, 0);
+        
       }
-      
+    
       if(mode == 0){
         //just display the time
         lq_turnOffCursor(&lcd);
-        
         if (tick - LCDCountTick >= 250) { // update the display every 100 ticks
               dateTime = ds1302_get_time(&rtc); // get the RTC time
               if (!dateTime.halted) {
                   // Display the date in yyyy-mm-dd format
                   lq_setCursor(&lcd, 0, 0);
-                  sprintf(LCDStr[0], "20%02u-%02u-%02u", dateTime.year, dateTime.month, dateTime.day);
+                  sprintf(LCDStr[0], "20%02u-%02u-%02u   M:%01u", dateTime.year, dateTime.month, dateTime.day, mode);
                   lq_print(&lcd, LCDStr[0]);
                   
                   // Display the time in hh:mm:ss format (24-hour format)
@@ -179,9 +190,14 @@ int main(void)
               }
               LCDCountTick = tick;
         }
+
       }else if (mode == 1){
         lq_turnOnCursor(&lcd);
         lq_setCursor(&lcd, cursorY, cursorX);
+
+
+        
+
 
         
         if(isNum(keyPressed)){
@@ -270,10 +286,13 @@ int main(void)
 
         }
       
+      } else if (mode == 2){
+        
       }
 
 
     }
+
 }
 
 ISR(TIMER0_OVF_vect) // this ISR is called approximately every 1 ms
