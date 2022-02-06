@@ -8,13 +8,13 @@
 
 #define ROWS 4
 #define COLS 4
+#define NUM_MODES 3
 
-#define NUM_MODES 4
 char keyMap[ROWS][COLS] = { // key definitions
-    {'3', '2', '1', '0'},
-    {'7', '6', '5', '4'},
-    {'A', '9', '^', '8'},
-    {'S', '>', 'v', '<'}
+    {'0', '1', '2', '3'},
+    {'4', '5', '6', '7'},
+    {'8', '^', '9', 'A'},
+    {'<', 'v', '>', 'S'}
 };
 
 //<, >, ^, v are arrow keys
@@ -29,6 +29,7 @@ char keyMap[ROWS][COLS] = { // key definitions
 #include "liquid_crystal_i2c.h"
 #include "ds1302.h"
 
+//FUNCTION HEADERS:
 
 void initKeypad();
 char getKeyPressed();
@@ -37,72 +38,94 @@ bool isNum(char c);
 char* getSubstring(char * str, int start, int finish);
 
 
+// RELEVANT CONNECTIONS:
+
+// Connection of LCD is as follows:
+// GND -> GND
+// VCC -> 5V
+// SDA -> A4
+// SCL -> A5
+
+
+// The DS1302 RTC doesn't necessarily use the SPI registers of the arduino so it's ok to use DS1302 pins on MOSI, MISO, SS, and SCK (D10 to D13)
+// Connection of RTC is as follows:
+// CLK -> A3
+// DAT -> A2
+// RST -> A1
+// VCC -> 3.3V (NOT 5V)
+
+
+// Connections of Keypad:
+// COLS 0 to 3 -> PD4 to PD7
+// ROWS 0 to 3 -> PB0 to PB3
+
+// Connections to Soil Sensor:
+// Vcc -> 5V
+// GND -> GND
+// A0 -> A0
+
+// Connection to Transistor Base -> PD3
+
+// For the sake of Serial, D0 and D1 is unconnected to anything
+
+
+
+// GLOBAL VARIABLE DECLARATIONS:
+
 volatile uint32_t tick = 0;
 uint32_t LCDCountTick; // time stamp
 
 
-char LCDStr[2][20]; // LCD string display
-char alarmTimes[5][20]; // Alarm Times String Display
+char LCDStr[2][16]; // LCD string display
+char realTimeStr[2][16]; // Real time string
+char alarmTimeStr[4][16]; // Alarm time string
+
+
+
+char keyPressed = 0; // initially no keys were pressed yet
 
 
 // Variables for RTC
 DS1302_t rtc; // DS1302 structure
 DateTime dateTime; // date and time structure
 
+
+
+//MAIN FUNCTION:
+
 int main(void)
 {
 
     Serial.begin(9600);
-    //for the sake of serial print 
-    //The keypad column pins 1 to 4 are connected to PC0 to PC3 pins.
-    // The keypad row pins 5 to 8 are connected to PB0 to PB3 pins.
 
-    // Connection of LCD is as follows:
-    // GND -> GND
-    // VCC -> 5V
-    // SDA -> A4
-    // SCL -> A5
-    
-    // Connection of RTC is as follows:
-    // CLK -> PD7
-    // DAT -> PD6
-    // RST -> PD5
-    // VCC -> 3.3V (NOT 5V)
 
-    
-    char keyPressed = 0; // initially no keys were pressed yet
+    // LOCAL VARIABLE DECLARATIONS: 
     uint8_t cursorX = 0, cursorY = 0; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
-            
 
 
-    //mode 0 - view real time
-    //mode 1 - set real time
-    //mode 2 - show alarm times
-    //mode 3 - set alarm times
+    //MODES:
+    //mode 0 - view time
+    //mode 1 - set time
+    //mode 2 - set alarm time
+    //mode 4 - set moisture requirement??? (I think it would be better if hard coded)
+
+    initTicker();
     
+
     
-    
-    //initialize keypad stuff (registers)
-    initKeypad();    
-
-
-    //initialize ticker stuff (registers)
-    initTicker(); // initialize ticker
-
     // Initialize the TWI module
     i2c_master_init(100000L); // set clock frequency to 100 kHz
-    
     // Initialize the LCD module
     LiquidCrystalDevice_t lcd = lq_init(0x27, 16, 2, LCD_5x8DOTS);
     
-    //clear/ synchronize with lcd
+    //clear/ synchronize with lcd 2x, because of no capacitor
     lq_clear(&lcd);
-
+    _delay_ms(500);
     
     // Initialize DS1302 and DateTime structure. The RTC module is
-    // connected as follows: SCLK -> PD7, SIO -? PD6, and CE -> PD5
-    rtc = ds1302_init(&PORTD, PORTD7, &PORTD, PORTD6, &PORTD, PORTD5);
+    // connected as follows: SCLK -> A3, SIO -> A2, and CE -> A1
+    rtc = ds1302_init(&PORTC, PORTC3, &PORTC, PORTC2, &PORTC, PORTC1);
     
     // Initialize a new time to Dec 5, 2021 12:00:00
      dateTime = ds1302_date_time(2021, MONTH_DEC, 5, 12, 00, 00);
@@ -112,9 +135,18 @@ int main(void)
     lq_turnOnBacklight(&lcd); // turn on backlight
     _delay_ms(1000); //wait for 1 second
 
+    lq_clear(&lcd);
+    _delay_ms(500);
+
+    
+    //initialize keypad stuff (registers)
+    initKeypad();  
     
     while(1) {
+  
       keyPressed = getKeyPressed();
+
+
 
 //      Serial.print("X: ");
 //      Serial.print(cursorX);
@@ -124,16 +156,14 @@ int main(void)
       if (keyPressed == 'A'){
         //switch mode is pressed
         mode = (mode + 1) % NUM_MODES;
-        _delay_ms(1000);
         lq_setCursor(&lcd, 0, 0);
 
-        cursorX = 0; cursorY = 0;
       }
       
       if(mode == 0){
-        //MODE 0
         //just display the time
         lq_turnOffCursor(&lcd);
+        
         if (tick - LCDCountTick >= 250) { // update the display every 100 ticks
               dateTime = ds1302_get_time(&rtc); // get the RTC time
               if (!dateTime.halted) {
@@ -150,7 +180,6 @@ int main(void)
               LCDCountTick = tick;
         }
       }else if (mode == 1){
-        //MODE 1
         lq_turnOnCursor(&lcd);
         lq_setCursor(&lcd, cursorY, cursorX);
 
@@ -241,43 +270,15 @@ int main(void)
 
         }
       
-      }else if (mode == 2){
-        //MODE 2 Display Alarm times 
-        //alarmTimes
-
-        //the <, >, and number keys; and cursor are disabled
-        lq_turnOffCursor(&lcd);
-    
-
-        if(keyPressed == '^' && alarmDisplay1 + 1 <= 4 && alarmDisplay2 + 1 <= 4){
-            alarmDisplay1 += 1;
-            alarmDisplay2 += 1;
-
-            //display text
-        }else if (keyPressed = 'v' && alarmDisplay1 - 1 >= 0 && alarmDisplay2 - 1 >= 0){
-            alarmDisplay1 -= 1;
-            alarmDisplay2 -= 1;
-
-            //display text
-        }
-
-        
-
-        
-        
-      }else if (mode == 3){
-        //MODE 3 Edit Alarm times
-        lq_turnOffCursor(&lcd);
-        
-
-        
       }
 
-      if(keyPressed != 0){
-          _delay_ms(500); //wait for 0.5 second  
-      }
 
     }
+}
+
+ISR(TIMER0_OVF_vect) // this ISR is called approximately every 1 ms
+{
+    tick++; // increment tick counter
 }
 
 char* getSubstring(char * str, int start, int finish){
@@ -308,31 +309,34 @@ bool isNum(char keyPressed){
 }
 
 void initKeypad(){
-    //initialize PB0 to PB3 as inputs (by default DDRB is 0, but it is good practice to just initialize stuff)
-    DDRB &= 0xF0;
-    PORTB |= 0x0F; // Initialize rows pins as input with pull-up enabled
+  //ROW PINS: PB0 TO PB3
+  DDRB &= 0xF0;
+  PORTB |= 0x0F; // Initialize rows pins as input with pull-up enabled
   
 }
 
 char getKeyPressed(){
   char keyPressed = 0;
+  //COL PINS: PD4 TO PD7 
   
   for (uint8_t c = 0; c < COLS; ++c) { // go through all column pins
-      DDRC |= (1<<c); // we pulse each columns 
-      PORTC &= ~(1<<c); // to LOW level
+      DDRD |= (1 << c << 4); // we pulse each columns 
+      PORTD &= ~(1 << c << 4); // to LOW level
+      
       for (uint8_t r = 0; r < ROWS; ++r){ // go through all row pins
           if (!(PINB & (1<<r))){
               // and check at which row was pulled LOW
               keyPressed = keyMap[r][c]; // assign the pressed key if confirmed
-              _delay_ms(100); //debounce
-          }
-
-          if(keyPressed != 0){
-            break;
           }
       }
-      PORTC |= (1<<c); // end of column pulse
-      DDRC &= ~(1<<c); // and set it back to input mode
+      PORTD |= (1 << c << 4); // end of column pulse
+      DDRD &= ~(1 << c << 4); // and set it back to input mode
+  }
+
+  if(keyPressed != 0){
+    _delay_ms(1000);  
+    Serial.print("KeyPressed: ");
+    Serial.println(keyPressed);
   }
 
   return keyPressed;
@@ -350,9 +354,4 @@ void initTicker() {
     TIMSK0 |= (1<<TOIE0); // enable overflow interrupt
     TCCR0B |= (1<<CS01) | (1<<CS00); // set prescaler to 64 and start timer
     sei(); // enable global interrupts
-}
-
-ISR(TIMER0_OVF_vect) // this ISR is called approximately every 1 ms
-{
-    tick++; // increment tick counter
 }
