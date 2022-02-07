@@ -76,9 +76,11 @@ volatile uint32_t tick = 0;
 uint32_t LCDCountTick; // time stamp
 
 
-char LCDStr[2][16]; // LCD string display
+
+//NOTE: NULL FRICKING TERMINAL STILL COUNTS IN THE STRING LENGTH
+char LCDStr[2][17]; // LCD string display
 //char realTimeStr[2][16]; // Real time string
-char alarmTimeStr[4][16]; // Alarm time string
+char alarmTimeStr[4][17]; // Alarm time string
 
 
 
@@ -208,7 +210,7 @@ int main(void)
               if (!dateTime.halted) {
                   // Display the date in yyyy-mm-dd format
                   lq_setCursor(&lcd, 0, 0);
-                  sprintf(LCDStr[0], "20%02u-%02u-%02u   M:%01u", dateTime.year, dateTime.month, dateTime.day, mode);
+                  sprintf(LCDStr[0], "20%02u-%02u-%02u   M:%01u\0", dateTime.year, dateTime.month, dateTime.day, mode);
                   lq_print(&lcd, LCDStr[0]);
                   
                   // Display the time in hh:mm:ss format (24-hour format)
@@ -357,6 +359,11 @@ int main(void)
                 
       }
 
+        Serial.print("LCDStr[0]: ");
+        Serial.println(LCDStr[0]);
+        
+        Serial.print("LCDStr[1]: ");
+        Serial.println(LCDStr[1]);
 
     }
 
