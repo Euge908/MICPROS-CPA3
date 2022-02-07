@@ -148,7 +148,7 @@ int main(void)
     initKeypad();  
     
     while(1) {
-  
+      //get keypress
       keyPressed = getKeyPressed();
 
 
@@ -162,9 +162,7 @@ int main(void)
   
       if (keyPressed == 'A'){
         //switch mode is pressed
-        mode = (mode + 1) % NUM_MODES;
-        lq_setCursor(&lcd, 0, 0);
-        
+        mode = (mode + 1) % NUM_MODES;        
 
 
         if(mode == 0){
@@ -317,7 +315,46 @@ int main(void)
         }
       
       } else if (mode == 2){
+        lq_turnOnCursor(&lcd);
+        lq_setCursor(&lcd, cursorY, cursorX);
         
+        //allow input and keypad functionality
+        if(isNum(keyPressed)){
+          if(isNum(LCDStr[cursorY][cursorX]) || LCDStr[cursorY][cursorX] == '_'){
+             LCDStr[cursorY][cursorX] = keyPressed;
+
+             lq_clear(&lcd);
+
+             lq_setCursor(&lcd, 0, 0);
+             lq_print(&lcd, LCDStr[0]);
+
+             lq_setCursor(&lcd, 1, 0);
+             lq_print(&lcd, LCDStr[1]);
+
+             lq_setCursor(&lcd, cursorY, cursorX);
+
+          }
+          
+        }else if (keyPressed == '<' | keyPressed == '>' | keyPressed == '^' | keyPressed == 'v' ){
+          //set boundary
+
+          //shift cursor buttons are pressed
+  
+          if(keyPressed == '<' && cursorX - 1 >= 0){
+              cursorX -= 1;             
+          }else if(keyPressed == '>' && cursorX + 1 <=15){
+            cursorX += 1;
+          }else if(keyPressed == '^' && cursorY - 1 >= 0){
+            cursorY -= 1;
+          }else if(keyPressed == 'v' && cursorY + 1 <= 1){
+            cursorY += 1;
+          }
+          
+          lq_setCursor(&lcd, cursorY, cursorX);
+
+        }else if (keyPressed == 'S'){}
+        //Save button is pressed
+                
       }
 
 
