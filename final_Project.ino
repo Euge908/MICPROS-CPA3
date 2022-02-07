@@ -79,7 +79,7 @@ uint32_t LCDCountTick; // time stamp
 
 //NOTE: NULL FRICKING TERMINAL STILL COUNTS IN THE STRING LENGTH
 char LCDStr[2][17]; // LCD string display
-char alarmTimeStr[4][17]; // Alarm time string
+char alarmTimeStr[2][17]; // Alarm time string
 
 
 
@@ -105,8 +105,11 @@ int main(void)
     uint8_t mode = 0; //current mode to display or edit
 
     //Initialize Array Values
+
+
     for(int i = 0, n = sizeof(alarmTimeStr)/sizeof(alarmTimeStr[0]); i < n; i++){
-      strncpy(alarmTimeStr[i], "__:__:__", sizeof(alarmTimeStr[0]) );
+      memset(alarmTimeStr[i], ' ',sizeof(alarmTimeStr[i])/ sizeof(char));
+      strncpy(alarmTimeStr[i], "__:__:__", 8 );
     }
 
 
@@ -170,12 +173,11 @@ int main(void)
           
         }else if (mode == 1){
         
-        }
-        if(mode == 2){
-          strncpy(LCDStr[0], alarmTimeStr[0], sizeof(LCDStr[0]) );
-          strncpy(LCDStr[1], alarmTimeStr[1], sizeof(LCDStr[1]) );
+        }else if(mode == 2){
+          strncpy(LCDStr[0], alarmTimeStr[0], 12 );
+          strncpy(LCDStr[1], alarmTimeStr[1], 12 );
+
           
-          lq_clear(&lcd);
         }
 
         LCDStr[0][13] = 'M';
@@ -185,6 +187,8 @@ int main(void)
         //subtract by '0' to convert char to uint
 
 
+
+        
         lq_setCursor(&lcd, 0, 0);
         lq_print(&lcd, LCDStr[0]);
         
@@ -350,11 +354,7 @@ int main(void)
                 
       }
 
-        Serial.print("LCDStr[0]: ");
-        Serial.println(LCDStr[0]);
-        
-        Serial.print("LCDStr[1]: ");
-        Serial.println(LCDStr[1]);
+
 
     }
 
