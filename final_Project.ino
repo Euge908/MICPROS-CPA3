@@ -77,7 +77,7 @@ uint32_t LCDCountTick; // time stamp
 
 
 char LCDStr[2][16]; // LCD string display
-char realTimeStr[2][16]; // Real time string
+//char realTimeStr[2][16]; // Real time string
 char alarmTimeStr[4][16]; // Alarm time string
 
 
@@ -102,6 +102,11 @@ int main(void)
     // LOCAL VARIABLE DECLARATIONS: 
     uint8_t cursorX = 0, cursorY = 0; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
+
+    //Initialize Array Values
+    for(int i = 0, n = sizeof(alarmTimeStr)/sizeof(alarmTimeStr[0]); i < n; i++){
+      strncpy(alarmTimeStr[i], "__:__:__", sizeof(alarmTimeStr[0]) );
+    }
 
 
     //MODES:
@@ -160,15 +165,40 @@ int main(void)
         mode = (mode + 1) % NUM_MODES;
         lq_setCursor(&lcd, 0, 0);
         
+
+
+        if(mode == 0){
+          
+        }else if (mode == 1){
+        
+        }
+        if(mode == 2){
+          strncpy(LCDStr[0], "__:__:__", sizeof(LCDStr[0]) );
+          strncpy(LCDStr[1], "__:__:__", sizeof(LCDStr[1]) );
+          
+          lq_clear(&lcd);
+        }
+
         LCDStr[0][13] = 'M';
         LCDStr[0][14] = ':';
         LCDStr[0][15] = mode + '0'; 
         //convert uint to char
-
         //subtract by '0' to convert char to uint
-        
-        lq_print(&lcd, LCDStr[0]);
+
+//        Serial.print("Mode ");
+//        Serial.print(mode);
+//        Serial.println(": ");
+//        Serial.print("LCDStr[0]: ");
+//        Serial.println(LCDStr[0]);
+//        
+//        Serial.print("LCDStr[1]: ");
+//        Serial.println(LCDStr[1]);
+
         lq_setCursor(&lcd, 0, 0);
+        lq_print(&lcd, LCDStr[0]);
+        
+        lq_setCursor(&lcd, 1, 0);
+        lq_print(&lcd, LCDStr[1]);
         
       }
     
