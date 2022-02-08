@@ -42,6 +42,13 @@ bool isValidTime(char arr[]);
 char* getSubstring(char * str, int start, int finish);
 
 
+
+//adc stuff
+float readInternalVoltage() ;
+void initADC();
+uint16_t readADC(uint8_t channel);
+
+
 // RELEVANT CONNECTIONS:
 
 // Connection of LCD is as follows:
@@ -402,6 +409,46 @@ int main(void)
     }
 
 }
+
+
+
+
+float readInternalVoltage(){
+  ADMUX = (1<<REFS0) | (1<<MUX3) | (1<<MUX2) | (1<<MUX1);
+
+  //burn the first 10 adc values
+  for(int i = 0; i< 11; i++){
+    ADCSRA |= (1<<ADSC); // start single conversion
+    while(ADCSRA & (1<<ADSC)); // wait until conversion is complete
+  }
+  
+
+  uint8_t Vcc = (1023/ ADC) * 1.1;//prone to some errors because of some math stuff but ok
+  ADMUX = (1<<REFS0);
+
+  return Vcc;
+  
+}
+
+
+
+
+
+void initADC() {
+    ADMUX |= (1<<REFS0); // selects internal AVCC as voltage reference
+    ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0) | (1<<ADEN); // set prescaler to 128 and enable ADC
+}
+
+uint16_t readADC(uint8_t channel) {
+    ADMUX |= (channel & 0x0F); // select the input channel
+    ADCSRA |= (1<<ADSC); // start single conversion
+    while(ADCSRA & (1<<ADSC)); // wait until conversion is complete
+    return ADC;
+}
+
+
+
+
 
 
 bool isValidTime(char arr[]){
