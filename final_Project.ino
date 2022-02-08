@@ -1,4 +1,6 @@
 //TODO: Fix M:X being editable
+//TODO: Add functionality to flash user if input time is invalid for modes 1 and 2
+//TODO: Add functionality to properly water soil
 
 
 #define F_CPU 16000000L
@@ -13,6 +15,22 @@
 #define COLS 4
 #define NUM_MODES 3
 
+
+/*
+#define GRAV_WATER_SLOPE 418.44
+#define GRAV_WATER_INTERCEPT 178.22
+
+#define GRAV_WATER_CONTENT 0.5
+#define ADC_VOLTAGE GRAV_WATER_SLOPE / ()
+
+#define ADC_THRESHOLD 1023 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
+
+
+//418.14 /(GWC + 178.22)= V
+//steps= 1023 * v/vcc
+
+*/
+ 
 char keyMap[ROWS][COLS] = { // key definitions
     {'0', '1', '2', '3'},
     {'4', '5', '6', '7'},
@@ -47,6 +65,11 @@ char* getSubstring(char * str, int start, int finish);
 float readInternalVoltage() ;
 void initADC();
 uint16_t readADC(uint8_t channel);
+
+
+//motor stuff
+void turnMotorOn();
+void turnMotorOff();
 
 
 // RELEVANT CONNECTIONS:
@@ -181,6 +204,7 @@ int main(void)
     while(1) {
 
       //water moisture read from soil sensor via adc
+      Serial.println(readInternalVoltage());
       waterMoisture = ( ((float)readADC(0) )/ 1023) * readInternalVoltage(); //change this relation for a more accurate stuff
 
 
@@ -212,9 +236,9 @@ int main(void)
           strncpy(LCDStr[0], alarmTimeStr[0], 12 );
           strncpy(LCDStr[1], alarmTimeStr[1], 12 );
 
-          Serial.println(LCDStr[0]);
-          Serial.println(LCDStr[1]);
-          
+//          Serial.println(LCDStr[0]);
+//          Serial.println(LCDStr[1]);
+//          
         }
 
         LCDStr[0][13] = 'M';
@@ -396,10 +420,10 @@ int main(void)
             strncpy(alarmTimeStr[0], LCDStr[0], 8 );
             
             
-            Serial.print("LCDStr[0]: ");
-            Serial.println(LCDStr[0]);
-            Serial.print("alarmTimeStr[0]: ");
-            Serial.println(alarmTimeStr[0]);
+//            Serial.print("LCDStr[0]: ");
+//            Serial.println(LCDStr[0]);
+//            Serial.print("alarmTimeStr[0]: ");
+//            Serial.println(alarmTimeStr[0]);
 
           }else{
             Serial.println("Alarm Time 1 is invalid");            
@@ -425,6 +449,18 @@ int main(void)
 
 }
 
+void turnMotorOn(){
+  DDRD |= (1 << PORTD3); //enable output
+  PORTD |= (1 << PORTD3);  //turn d3 high
+    
+}
+
+void turnMotorOff()
+{
+  DDRD &= ~(1 << PORTD3); //disable output
+  PORTD &= ~(1 << PORTD3); //turn d3 off
+  
+}
 
 
 
@@ -438,7 +474,7 @@ float readInternalVoltage(){
   }
   
 
-  uint8_t Vcc = (1023/ ADC) * 1.1;//prone to some errors because of some math stuff but ok
+  float Vcc = (1023/ ADC) * 1.1;//prone to some errors because of some math stuff but ok
   ADMUX = (1<<REFS0);
 
   return Vcc;
