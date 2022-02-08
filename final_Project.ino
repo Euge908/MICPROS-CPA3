@@ -1,3 +1,6 @@
+//TODO: Fix M:X being editable
+
+
 #define F_CPU 16000000L
 
 #include <avr/io.h>
@@ -35,6 +38,7 @@ void initKeypad();
 char getKeyPressed();
 void initTicker();
 bool isNum(char c);
+bool isValidTime(char arr[]);
 char* getSubstring(char * str, int start, int finish);
 
 
@@ -97,18 +101,24 @@ DateTime dateTime; // date and time structure
 int main(void)
 {
 
+
+    
+
     Serial.begin(9600);
 
 
     // LOCAL VARIABLE DECLARATIONS: 
     uint8_t cursorX = 0, cursorY = 0; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
+    bool inputDisabled = false;
 
+    
     //Initialize Array Values
 
 
+
     for(int i = 0, n = sizeof(alarmTimeStr)/sizeof(alarmTimeStr[0]); i < n; i++){
-      memset(alarmTimeStr[i], ' ',sizeof(alarmTimeStr[i])/ sizeof(char));
+      memset(alarmTimeStr[i], ' ',sizeof(alarmTimeStr[i])/ sizeof(char) -1 );
       strncpy(alarmTimeStr[i], "__:__:__", 8 );
     }
 
@@ -150,10 +160,13 @@ int main(void)
     
     //initialize keypad stuff (registers)
     initKeypad();  
-    
+
+        
     while(1) {
       //get keypress
-      keyPressed = getKeyPressed();
+      if(!inputDisabled){
+        keyPressed = getKeyPressed();      
+      }
 
 
 
@@ -177,6 +190,8 @@ int main(void)
           strncpy(LCDStr[0], alarmTimeStr[0], 12 );
           strncpy(LCDStr[1], alarmTimeStr[1], 12 );
 
+          Serial.println(LCDStr[0]);
+          Serial.println(LCDStr[1]);
           
         }
 
@@ -349,9 +364,37 @@ int main(void)
           
           lq_setCursor(&lcd, cursorY, cursorX);
 
-        }else if (keyPressed == 'S'){}
-        //Save button is pressed
-                
+        }else if (keyPressed == 'S'){
+          //Save button is pressed
+          //format is __:__:__ for both time 1 and time 2
+
+          char *hour, *minute, *second;
+          
+          if( isValidTime(LCDStr[0]) ){
+            strncpy(alarmTimeStr[0], LCDStr[0], 8 );
+            
+            
+            Serial.print("LCDStr[0]: ");
+            Serial.println(LCDStr[0]);
+            Serial.print("alarmTimeStr[0]: ");
+            Serial.println(alarmTimeStr[0]);
+
+          }else{
+            Serial.println("Alarm Time 1 is invalid");            
+          }
+
+          if( isValidTime(LCDStr[1]) ){
+            strncpy(alarmTimeStr[1], LCDStr[1], 8 );
+
+            Serial.print("LCDStr[1]: ");
+            Serial.println(LCDStr[1]);
+            Serial.print("alarmTimeStr[1]: ");
+            Serial.println(alarmTimeStr[1]);
+
+          }else{
+            Serial.println("Alarm Time 2 is invalid");
+          }
+        }
       }
 
 
@@ -360,10 +403,41 @@ int main(void)
 
 }
 
+
+bool isValidTime(char arr[]){
+  //arr[] would decay to a pointer
+  //__:__:__ 
+  char *hour, *minute, *second;
+  hour  = getSubstring(arr, 0, 2);
+  minute = getSubstring(arr, 3, 5);
+  second = getSubstring(arr, 6, 8);
+
+  int hourInt = atoi(hour), minuteInt = atoi(minute), secondInt = atoi(second);
+  
+  if(isNum(arr[0]) && isNum(arr[1]) && isNum(arr[3]) && isNum(arr[4]) && isNum(arr[6]) && isNum(arr[7])
+      && hourInt >= 0 && hourInt <= 24 && minuteInt >= 0 && minuteInt <=59 && secondInt >= 0 && secondInt <=59
+    ){
+    return true;  
+  }  
+
+
+
+  free(hour);
+  free(minute);
+  free(second); 
+
+  
+  return false;
+}
+
 ISR(TIMER0_OVF_vect) // this ISR is called approximately every 1 ms
 {
     tick++; // increment tick counter
 }
+
+
+
+
 
 char* getSubstring(char * str, int start, int finish){
   int len = finish - start;
