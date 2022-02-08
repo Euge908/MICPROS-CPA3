@@ -181,7 +181,7 @@ int main(void)
     while(1) {
 
       //water moisture read from soil sensor via adc
-      waterMoisture = ( ((float)readADC(0) )/ 1023) * Vcc; //change this relation for a more accurate stuff
+      waterMoisture = ( ((float)readADC(0) )/ 1023) * readInternalVoltage(); //change this relation for a more accurate stuff
 
 
       
