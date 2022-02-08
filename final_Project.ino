@@ -118,7 +118,11 @@ int main(void)
     uint8_t cursorX = 0, cursorY = 0; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
     bool inputDisabled = false;
-
+    
+    
+    
+    float waterMoisture;
+    
     
     //Initialize Array Values
 
@@ -168,8 +172,19 @@ int main(void)
     //initialize keypad stuff (registers)
     initKeypad();  
 
+
+    //initialize adc
+    initADC();
+
+    
         
     while(1) {
+
+      //water moisture read from soil sensor via adc
+      waterMoisture = ( ((float)readADC(0) )/ 1023) * Vcc; //change this relation for a more accurate stuff
+
+
+      
       //get keypress
       if(!inputDisabled){
         keyPressed = getKeyPressed();      
