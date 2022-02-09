@@ -17,8 +17,8 @@
 
 
 
-#define WATER_MAX 232 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
-#define WATER_THRESHOLD 1020 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
+#define WATER_MAX 150 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
+#define WATER_THRESHOLD 800 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
 
 
 /*
@@ -295,15 +295,28 @@ int main(void)
               
               //water moisture read from soil sensor via adc
                //change this relation for a more accurate stuff
-              float waterMoisture = readADC(0) ;
-              Serial.println(waterMoisture);
+              float waterMoisture = 0;
 
-              while (waterMoisture <= WATER_THRESHOLD && waterMoisture >= WATER_MAX){
-                  turnMotorOn();
-                  Serial.println(waterMoisture);
+              for(int i = 0; i< 10; i++){
+                waterMoisture = readADC(0)/10 ;  
               }
               
-              waterDispensed1 = true;              
+              Serial.println(waterMoisture);
+
+
+              turnMotorOn();
+
+              while (waterMoisture < WATER_THRESHOLD && waterMoisture > WATER_MAX){
+                  for(int i = 0; i< 10; i++){
+                    waterMoisture =readADC(0)/10 ;  
+                  }
+                  
+                  Serial.println(waterMoisture);
+              }
+
+              waterDispensed1 = true;   
+              turnMotorOff();
+           
           }        
         
       }          
@@ -315,15 +328,28 @@ int main(void)
               
               //water moisture read from soil sensor via adc
                //change this relation for a more accurate stuff
-              float waterMoisture = readADC(0);
-              Serial.println(waterMoisture);
+              float waterMoisture = 0;
 
-              while (waterMoisture <= WATER_THRESHOLD && waterMoisture >= WATER_MAX){
-                  turnMotorOn();
-                  Serial.println(waterMoisture);
+              for(int i = 0; i< 10; i++){
+                waterMoisture =readADC(0)/10 ;  
               }
 
-              waterDispensed2 = true;              
+              Serial.println(waterMoisture);
+
+              
+              turnMotorOn();
+
+              while (waterMoisture <= WATER_THRESHOLD && waterMoisture >= WATER_MAX){
+                  for(int i = 0; i< 10; i++){
+                    waterMoisture =readADC(0)/10 ;  
+                  }
+
+                  Serial.println(waterMoisture);
+              }
+              
+              waterDispensed2 = true;     
+              turnMotorOff();
+         
           }        
         
       }    
@@ -726,7 +752,7 @@ char getKeyPressed(){
   }
 
   if(keyPressed != 0){
-    _delay_ms(200);  
+    _delay_ms(100);  
     Serial.print("KeyPressed: ");
     Serial.println(keyPressed);
   }
