@@ -298,7 +298,7 @@ int main(void)
               float waterMoisture = 0;
 
               for(int i = 0; i< 10; i++){
-                waterMoisture = readADC(0)/10 ;  
+                waterMoisture += readADC(0)/10 ;  
               }
               
               Serial.println(waterMoisture);
@@ -308,7 +308,7 @@ int main(void)
 
               while (waterMoisture < WATER_THRESHOLD && waterMoisture > WATER_MAX){
                   for(int i = 0; i< 10; i++){
-                    waterMoisture =readADC(0)/10 ;  
+                    waterMoisture +=readADC(0)/10 ;  
                   }
                   
                   Serial.println(waterMoisture);
@@ -331,7 +331,7 @@ int main(void)
               float waterMoisture = 0;
 
               for(int i = 0; i< 10; i++){
-                waterMoisture =readADC(0)/10 ;  
+                waterMoisture +=readADC(0)/10 ;  
               }
 
               Serial.println(waterMoisture);
@@ -339,9 +339,9 @@ int main(void)
               
               turnMotorOn();
 
-              while (waterMoisture <= WATER_THRESHOLD && waterMoisture >= WATER_MAX){
+              while (waterMoisture < WATER_THRESHOLD && waterMoisture > WATER_MAX){
                   for(int i = 0; i< 10; i++){
-                    waterMoisture =readADC(0)/10 ;  
+                    waterMoisture +=readADC(0)/10 ;  
                   }
 
                   Serial.println(waterMoisture);
