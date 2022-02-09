@@ -16,6 +16,11 @@
 #define NUM_MODES 3
 
 
+
+#define WATER_MAX 232 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
+#define WATER_THRESHOLD 1020 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
+
+
 /*
 #define GRAV_WATER_SLOPE 418.44
 #define GRAV_WATER_INTERCEPT 178.22
@@ -70,6 +75,10 @@ uint16_t readADC(uint8_t channel);
 //motor stuff
 void turnMotorOn();
 void turnMotorOff();
+void initMotor();
+
+
+bool motorStatus();
 
 
 // RELEVANT CONNECTIONS:
@@ -140,14 +149,17 @@ int main(void)
     // LOCAL VARIABLE DECLARATIONS: 
     uint8_t cursorX = 0, cursorY = 0; //for the display cursor position in LCD
     uint8_t mode = 0; //current mode to display or edit
-    bool inputDisabled = false;
+    
+    
+    bool alarmTime1Valid = false, alarmTime2Valid = false;
+    bool waterDispensed1 = false, waterDispensed2 = false;
     
     
     
-    float waterMoisture;
-    
+    uint8_t alarmHour1, alarmMinute1, alarmSeconds1, alarmHour2, alarmMinute2, alarmSeconds2;
     
     //Initialize Array Values
+
 
 
 
@@ -198,23 +210,133 @@ int main(void)
 
     //initialize adc
     initADC();
-
+    initMotor();
     
+//      turnMotorOn();
+
         
     while(1) {
 
-      //water moisture read from soil sensor via adc
-      Serial.println(readInternalVoltage());
-      waterMoisture = ( ((float)readADC(0) )/ 1023) * readInternalVoltage(); //change this relation for a more accurate stuff
 
 
-      
-      //get keypress
-      if(!inputDisabled){
-        keyPressed = getKeyPressed();      
+      keyPressed = getKeyPressed();      
+
+
+      if(alarmTime1Valid){
+
+        //fricking buffer overflows
+        char *c1_hr, *c1_min, *c1_sec;
+        c1_hr = getSubstring(alarmTimeStr[0], 0, 2);
+        c1_min = getSubstring(alarmTimeStr[0], 3, 5);
+        c1_sec = getSubstring(alarmTimeStr[0], 6, 8);
+
+        alarmHour1 = atoi(c1_hr);
+        alarmMinute1 = atoi(c1_min); 
+        alarmSeconds1 = atoi(c1_sec); 
+
+
+        free(c1_hr);
+        free(c1_min);
+        free(c1_sec);
+
       }
 
+      if(alarmTime2Valid){
+        char *c2_hr, *c2_min, *c2_sec;
 
+        c2_hr = getSubstring(alarmTimeStr[1], 0, 2);
+        c2_min = getSubstring(alarmTimeStr[1], 3, 5);
+        c2_sec = getSubstring(alarmTimeStr[1], 6, 8);
+        
+        alarmHour2 = atoi(c2_hr);
+        alarmMinute2 = atoi(c2_min); 
+        alarmSeconds2 = atoi(c2_sec);  
+
+
+        free(c2_hr);
+        free(c2_min);
+        free(c2_sec);
+        
+
+      }
+
+        
+
+      
+      dateTime = ds1302_get_time(&rtc); // get the RTC time
+
+      //reset water dispensed every midnight
+      if(!dateTime.halted){
+        if(dateTime.hour == 0 ){
+          waterDispensed1 = false;
+          waterDispensed2 = false;  
+        }
+        
+      }
+      
+
+
+//      Serial.print("alarmTime1Valid : ");
+//      Serial.println(alarmTime1Valid );
+//      Serial.print("!dateTime.halted : ");
+//      Serial.println(!dateTime.halted);
+//      Serial.print("!waterDispensed1: ");
+//      Serial.println(!waterDispensed1);
+//      Serial.print("[2]: ");
+//      Serial.println(dateTime.hour >= alarmHour1 && dateTime.minute >= alarmMinute1 && dateTime.second >= alarmSeconds1);
+      
+      if(alarmTime1Valid && !dateTime.halted && !waterDispensed1) {
+          if(dateTime.hour >= alarmHour1 && dateTime.minute >= alarmMinute1 && dateTime.second >= alarmSeconds1){
+
+              for(int i = 0; i< 100; i++){
+                Serial.println("PASSED");              
+              }
+              //dispense water till threshold is reached
+              
+              //water moisture read from soil sensor via adc
+               //change this relation for a more accurate stuff
+              float waterMoisture = readADC(0) ;
+              Serial.println(waterMoisture);
+
+              while (waterMoisture <= WATER_THRESHOLD && waterMoisture >= WATER_MAX){
+                  turnMotorOn();
+                  Serial.println(waterMoisture);
+              }
+              
+              waterDispensed1 = true;              
+          }        
+        
+      }          
+      
+
+      if(alarmTime2Valid && !dateTime.halted && !waterDispensed2) {
+          if(dateTime.hour >= alarmHour2 && dateTime.minute >= alarmMinute2 && dateTime.second >= alarmSeconds2){
+              //dispense water till threshold is reached
+              
+              //water moisture read from soil sensor via adc
+               //change this relation for a more accurate stuff
+              float waterMoisture = readADC(0);
+              Serial.println(waterMoisture);
+
+              while (waterMoisture <= WATER_THRESHOLD && waterMoisture >= WATER_MAX){
+                  turnMotorOn();
+                  Serial.println(waterMoisture);
+              }
+
+              waterDispensed2 = true;              
+          }        
+        
+      }    
+
+      
+
+//      if(waterMoisture >= WATER_THRESHOLD && waterMoisture <= WATER_MAX){
+//          
+//      }
+
+
+//      Serial.println(motorStatus() );
+//      _delay_ms(2000);
 
 //      Serial.print("X: ");
 //      Serial.print(cursorX);
@@ -262,7 +384,6 @@ int main(void)
         //just display the time
         lq_turnOffCursor(&lcd);
         if (tick - LCDCountTick >= 250) { // update the display every 100 ticks
-              dateTime = ds1302_get_time(&rtc); // get the RTC time
               if (!dateTime.halted) {
                   // Display the date in yyyy-mm-dd format
                   lq_setCursor(&lcd, 0, 0);
@@ -327,7 +448,6 @@ int main(void)
           sprintf(LCDStr[1], "%s:%s:%s", hour, minute, second);
 
 
-          //holy shit this works. special thanks to git --reset hard 
 //          Serial.println(LCDStr[0]);
 //          Serial.println(LCDStr[1]);
 //          Serial.println(x);
@@ -425,21 +545,28 @@ int main(void)
 //            Serial.print("alarmTimeStr[0]: ");
 //            Serial.println(alarmTimeStr[0]);
 
+              alarmTime1Valid = true;
+
           }else{
             Serial.println("Alarm Time 1 is invalid");            
+              alarmTime1Valid = false;
           }
 
           if( isValidTime(LCDStr[1]) ){
             strncpy(alarmTimeStr[1], LCDStr[1], 8 );
+            alarmTime2Valid = true;
 
-            Serial.print("LCDStr[1]: ");
-            Serial.println(LCDStr[1]);
-            Serial.print("alarmTimeStr[1]: ");
-            Serial.println(alarmTimeStr[1]);
+//            Serial.print("LCDStr[1]: ");
+//            Serial.println(LCDStr[1]);
+//            Serial.print("alarmTimeStr[1]: ");
+//            Serial.println(alarmTimeStr[1]);
 
           }else{
             Serial.println("Alarm Time 2 is invalid");
+            alarmTime2Valid = false;
+
           }
+
         }
       }
 
@@ -448,17 +575,26 @@ int main(void)
     }
 
 }
+void initMotor(){
+  DDRD |= (1 << PD3); //enable output
+}
+
+
+bool motorStatus(){
+  return ((DDRD >> PD3) && 1) && (((PORTD>> PD3) && 1)) ;
+
+  
+}
+
 
 void turnMotorOn(){
-  DDRD |= (1 << PORTD3); //enable output
-  PORTD |= (1 << PORTD3);  //turn d3 high
+  PORTD |= (1 << PD3);  //turn d3 high
     
 }
 
 void turnMotorOff()
 {
-  DDRD &= ~(1 << PORTD3); //disable output
-  PORTD &= ~(1 << PORTD3); //turn d3 off
+  PORTD &= ~(1 << PD3); //turn d3 off
   
 }
 
@@ -590,7 +726,7 @@ char getKeyPressed(){
   }
 
   if(keyPressed != 0){
-    _delay_ms(1000);  
+    _delay_ms(200);  
     Serial.print("KeyPressed: ");
     Serial.println(keyPressed);
   }
