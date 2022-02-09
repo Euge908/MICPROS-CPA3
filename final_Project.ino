@@ -17,8 +17,8 @@
 
 
 
-#define WATER_MAX 150 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
-#define WATER_THRESHOLD 800 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
+#define WATER_MAX 300 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
+#define WATER_THRESHOLD 1023 // TODO: CHANGE THIS WHEN YOU MAKE THE REGRESSION PLOT
 
 
 /*
@@ -305,8 +305,9 @@ int main(void)
 
 
               turnMotorOn();
-
+              
               while (waterMoisture < WATER_THRESHOLD && waterMoisture > WATER_MAX){
+                  waterMoisture = 0;
                   for(int i = 0; i< 10; i++){
                     waterMoisture +=readADC(0)/10 ;  
                   }
@@ -340,6 +341,7 @@ int main(void)
               turnMotorOn();
 
               while (waterMoisture < WATER_THRESHOLD && waterMoisture > WATER_MAX){
+                  waterMoisture = 0;
                   for(int i = 0; i< 10; i++){
                     waterMoisture +=readADC(0)/10 ;  
                   }
